@@ -5,17 +5,23 @@ import com.github.hermannpencole.nifi.swagger.client.FlowApi;
 import com.github.hermannpencole.nifi.swagger.client.ProcessGroupsApi;
 import com.github.hermannpencole.nifi.swagger.client.TemplatesApi;
 import com.github.hermannpencole.nifi.swagger.client.model.*;
+import com.sun.xml.internal.txw2.output.IndentingXMLStreamWriter;
+import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
-import java.io.File;
-import java.io.IOException;
+import javax.xml.bind.JAXBContext;
+import javax.xml.bind.JAXBElement;
+import javax.xml.bind.Marshaller;
+import javax.xml.bind.Unmarshaller;
+import javax.xml.stream.XMLOutputFactory;
+import javax.xml.stream.XMLStreamWriter;
+import javax.xml.transform.stream.StreamSource;
+import java.io.*;
 import java.net.URISyntaxException;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -55,7 +61,7 @@ public class TemplateService {
      * @throws URISyntaxException
      * @throws ApiException
      */
-    public void installOnBranch(List<String> branch, String fileConfiguration) throws ApiException {
+    public void installOnBranch(List<String> branch, String fileConfiguration) throws ApiException, IOException {
         ProcessGroupFlowDTO processGroupFlow = processGroupService.createDirectory(branch).getProcessGroupFlow();
         File file = new File(fileConfiguration);
 
@@ -66,12 +72,98 @@ public class TemplateService {
         if (!template.isPresent()) {
             template = Optional.of(processGroupsApi.uploadTemplate(processGroupFlow.getId(), file));
         }*/
-        Optional<TemplateEntity> template = Optional.of(processGroupsApi.uploadTemplate(processGroupFlow.getId(), file));
+
+
+//        String templateStr = Files.toString(file, Charset.forName("UTF-8"));
+//        Type returnType = new TypeToken<TemplateDTO>(){}.getType();
+//        TemplateDTO t = (new XML()).deserialize(templateStr, returnType);
+
+        // read and deserialize template from file
+        org.apache.nifi.web.api.dto.TemplateDTO templ = null;
+        try {
+            JAXBContext context = JAXBContext.newInstance(org.apache.nifi.web.api.dto.TemplateDTO.class);
+            Unmarshaller unmarshaller = context.createUnmarshaller();
+            JAXBElement<org.apache.nifi.web.api.dto.TemplateDTO> templateElement =
+                    unmarshaller.unmarshal(
+                            new StreamSource(new FileInputStream(file)),
+                            org.apache.nifi.web.api.dto.TemplateDTO.class
+                    );
+            templ = templateElement.getValue();
+            System.out.println(templ);
+        } catch (Exception e) {
+            LOG.error("Failed deserializing template", e);
+        }
+
+        // 1. Cache service guid to name mapping from controllerServices section of template.
+        Map<String, String> guidToName = templ.getSnippet().getControllerServices().stream()
+                .collect(Collectors.toMap(
+                        org.apache.nifi.web.api.dto.ControllerServiceDTO::getId,
+                        org.apache.nifi.web.api.dto.ControllerServiceDTO::getName
+                ));
+
+        // 2. Delete controllerServices from the template before template is uploaded to nifi in order to prevent creation of duplicates.
+        File templateTmpFile = null;
+        try {
+            templ.getSnippet().setControllerServices(new HashSet<>());
+            // serialize template to file
+            InputStream templateIn = new ByteArrayInputStream(serialize(templ));
+            templateTmpFile = File.createTempFile("nifi", "template");
+            OutputStream out = new FileOutputStream(templateTmpFile);
+            IOUtils.copy(templateIn, out);
+        } catch (Exception e) {
+            LOG.error("Failed deserializing template", e);
+            throw new ApiException(e);
+        }
+
+        // 3. Pull list of controller services from nifi.
+        List<ControllerServiceEntity> controllerServices = flowApi
+                .getControllerServicesFromGroup(processGroupFlow.getId())
+                .getControllerServices();
+
+
+        Optional<TemplateEntity> template = Optional.of(processGroupsApi.uploadTemplate(processGroupFlow.getId(), templateTmpFile));
         InstantiateTemplateRequestEntity instantiateTemplate = new InstantiateTemplateRequestEntity(); // InstantiateTemplateRequestEntity | The instantiate template request.
         instantiateTemplate.setTemplateId(template.get().getTemplate().getId());
         instantiateTemplate.setOriginX(0d);
         instantiateTemplate.setOriginY(0d);
-        processGroupsApi.instantiateTemplate(processGroupFlow.getId(), instantiateTemplate);
+        FlowEntity flow = processGroupsApi.instantiateTemplate(processGroupFlow.getId(), instantiateTemplate);
+
+
+        // 4. For each processor's property check if its value is present in the cache.
+        // 5. If property value is in a cache, using cached name try to match against controller service name in the list pulled in 3.
+        List<ProcessorEntity> processorEntities = flow.getFlow().getProcessors();
+        processorEntities.stream().forEach(processorEntity -> {
+            Map<String, String> configProperties = processorEntity.getComponent().getConfig().getProperties();
+            configProperties.forEach((key, value) ->
+                    Optional.ofNullable(guidToName.get(value))
+                            .map(serviceName ->
+                                    controllerServices.stream()
+                                            .filter(controllerService -> controllerService.getComponent().getName().equals(guidToName.get(value)))
+                                            .findFirst()
+                                            .map(controllerServiceEntity -> configProperties.put(key, controllerServiceEntity.getId()))
+                            )
+            );
+        });
+
+        System.out.println(flow);
+
+        // 6. Update matched controller services references.
+
+
+    }
+
+    private static byte[] serialize(final org.apache.nifi.web.api.dto.TemplateDTO dto) throws Exception {
+        final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        final BufferedOutputStream bos = new BufferedOutputStream(baos);
+
+        JAXBContext context = JAXBContext.newInstance(org.apache.nifi.web.api.dto.TemplateDTO.class);
+        Marshaller marshaller = context.createMarshaller();
+        XMLOutputFactory xmlof = XMLOutputFactory.newInstance();
+        XMLStreamWriter writer = new IndentingXMLStreamWriter(xmlof.createXMLStreamWriter(bos));
+        marshaller.marshal(dto, writer);
+
+        bos.flush();
+        return baos.toByteArray(); //Note: For really large templates this could use a lot of heap space
     }
 
     public void undeploy(List<String> branch) throws ApiException {
