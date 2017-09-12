@@ -78,12 +78,12 @@ public class TemplateService {
         }*/
 
 
-        // this way of deserializing doesn't work
+        // deserializing template using nifi-swagger-client DTOs fails
 //        String templateStr = Files.toString(file, Charset.forName("UTF-8"));
 //        Type returnType = new TypeToken<TemplateDTO>(){}.getType();
 //        TemplateDTO t = (new XML()).deserialize(templateStr, returnType);
 
-        // read and deserialize template from file (using nifi-client-dto here)
+        // deserialize template using nifi-client-dto (provided by nifi)
         org.apache.nifi.web.api.dto.TemplateDTO templ = null;
         try {
             JAXBContext context = JAXBContext.newInstance(org.apache.nifi.web.api.dto.TemplateDTO.class);
@@ -110,7 +110,7 @@ public class TemplateService {
         File templateTmpFile = null;
         try {
             templ.getSnippet().setControllerServices(new HashSet<>());
-            // serialize modified template to temp file
+            // serialize and store modified template in temp file
             InputStream templateIn = new ByteArrayInputStream(serialize(templ));
             templateTmpFile = File.createTempFile("nifi", "template");
             OutputStream out = new FileOutputStream(templateTmpFile);
