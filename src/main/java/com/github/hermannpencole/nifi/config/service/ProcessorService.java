@@ -80,7 +80,7 @@ public class ProcessorService {
     public ProcessorEntity updateProcessor(ProcessorEntity processor) {
         ProcessorConfigDTO config = processor.getComponent().getConfig();
 
-        // otherwise auto terminate info is lost, why?
+        // add auto terminated relations to config, otherwise auto terminate info is lost, why?
         processor.getComponent().getRelationships().forEach(relationshipDTO -> {
                     if (relationshipDTO.getAutoTerminate()) {
                         config.addAutoTerminatedRelationshipsItem(relationshipDTO.getName());
