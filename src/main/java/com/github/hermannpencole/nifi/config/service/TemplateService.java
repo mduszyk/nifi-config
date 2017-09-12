@@ -3,6 +3,7 @@ package com.github.hermannpencole.nifi.config.service;
 import com.github.hermannpencole.nifi.swagger.ApiException;
 import com.github.hermannpencole.nifi.swagger.client.FlowApi;
 import com.github.hermannpencole.nifi.swagger.client.ProcessGroupsApi;
+import com.github.hermannpencole.nifi.swagger.client.ProcessorsApi;
 import com.github.hermannpencole.nifi.swagger.client.TemplatesApi;
 import com.github.hermannpencole.nifi.swagger.client.model.*;
 import com.sun.xml.internal.txw2.output.IndentingXMLStreamWriter;
@@ -46,6 +47,9 @@ public class TemplateService {
     private ProcessGroupService processGroupService;
 
     @Inject
+    private ProcessorService processorService;
+
+    @Inject
     private ProcessGroupsApi processGroupsApi;
 
     @Inject
@@ -74,6 +78,7 @@ public class TemplateService {
         }*/
 
 
+        // this way of deserializing doesn't work
 //        String templateStr = Files.toString(file, Charset.forName("UTF-8"));
 //        Type returnType = new TypeToken<TemplateDTO>(){}.getType();
 //        TemplateDTO t = (new XML()).deserialize(templateStr, returnType);
@@ -105,7 +110,7 @@ public class TemplateService {
         File templateTmpFile = null;
         try {
             templ.getSnippet().setControllerServices(new HashSet<>());
-            // serialize template to file
+            // serialize modified template to temp file
             InputStream templateIn = new ByteArrayInputStream(serialize(templ));
             templateTmpFile = File.createTempFile("nifi", "template");
             OutputStream out = new FileOutputStream(templateTmpFile);
@@ -116,7 +121,7 @@ public class TemplateService {
         }
 
         // 3. Pull list of controller services from nifi.
-        List<ControllerServiceEntity> controllerServices = flowApi
+        List<ControllerServiceEntity> controllerServiceEntities = flowApi
                 .getControllerServicesFromGroup(processGroupFlow.getId())
                 .getControllerServices();
 
@@ -132,23 +137,21 @@ public class TemplateService {
         // 4. For each processor's property check if its value is present in the cache.
         // 5. If property value is in a cache, using cached name try to match against controller service name in the list pulled in 3.
         List<ProcessorEntity> processorEntities = flow.getFlow().getProcessors();
-        processorEntities.stream().forEach(processorEntity -> {
+        processorEntities.forEach(processorEntity -> {
             Map<String, String> configProperties = processorEntity.getComponent().getConfig().getProperties();
             configProperties.forEach((key, value) ->
                     Optional.ofNullable(guidToName.get(value))
                             .map(serviceName ->
-                                    controllerServices.stream()
-                                            .filter(controllerService -> controllerService.getComponent().getName().equals(guidToName.get(value)))
+                                    controllerServiceEntities.stream()
+                                            .filter(controllerServiceEntity -> serviceName.equals(controllerServiceEntity.getComponent().getName()))
                                             .findFirst()
                                             .map(controllerServiceEntity -> configProperties.put(key, controllerServiceEntity.getId()))
                             )
             );
         });
 
-        System.out.println(flow);
-
         // 6. Update matched controller services references.
-
+        processorEntities.forEach(processorEntity -> processorService.updateProcessor(processorEntity));
 
     }
 

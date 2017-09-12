@@ -4,6 +4,7 @@ import com.github.hermannpencole.nifi.config.model.ConfigException;
 import com.github.hermannpencole.nifi.config.utils.FunctionUtils;
 import com.github.hermannpencole.nifi.swagger.ApiException;
 import com.github.hermannpencole.nifi.swagger.client.ProcessorsApi;
+import com.github.hermannpencole.nifi.swagger.client.model.ProcessorConfigDTO;
 import com.github.hermannpencole.nifi.swagger.client.model.ProcessorDTO;
 import com.github.hermannpencole.nifi.swagger.client.model.ProcessorEntity;
 import org.slf4j.Logger;
@@ -12,6 +13,7 @@ import org.slf4j.LoggerFactory;
 import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
+import java.util.Map;
 
 /**
  * Class that offer service for process group
@@ -59,7 +61,7 @@ public class ProcessorService {
                 body.setComponent(new ProcessorDTO());
                 body.getComponent().setState(state);
                 body.getComponent().setId(processor.getId());
-                body.getComponent().setRestricted(null);
+//                body.getComponent().setRestricted(null);
                 ProcessorEntity processorEntity= processorsApi.updateProcessor(processor.getId(), body);
                 LOG.info(" {} ({}) is {} ", processorEntity.getComponent().getName(), processorEntity.getId(), processorEntity.getComponent().getState());
                 haveResult = true;
@@ -73,6 +75,26 @@ public class ProcessorService {
             return !haveResult;
         }, interval, timeout);
 
+    }
+
+    public ProcessorEntity updateProcessor(ProcessorEntity processor) {
+        ProcessorConfigDTO config = processor.getComponent().getConfig();
+
+        // otherwise auto terminate info is lost, why?
+        processor.getComponent().getRelationships().forEach(relationshipDTO -> {
+                    if (relationshipDTO.getAutoTerminate()) {
+                        config.addAutoTerminatedRelationshipsItem(relationshipDTO.getName());
+                    }
+                }
+        );
+
+//        ProcessorEntity body = new ProcessorEntity();
+//        body.setRevision(processor.getRevision());
+//        body.setComponent(new ProcessorDTO());
+//        body.getComponent().setId(processor.getId());
+//        body.getComponent().setConfig(config);
+
+        return processorsApi.updateProcessor(processor.getId(), processor);
     }
 
     /**
