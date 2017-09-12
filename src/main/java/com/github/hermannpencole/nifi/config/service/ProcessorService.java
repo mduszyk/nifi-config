@@ -88,12 +88,6 @@ public class ProcessorService {
                 }
         );
 
-//        ProcessorEntity body = new ProcessorEntity();
-//        body.setRevision(processor.getRevision());
-//        body.setComponent(new ProcessorDTO());
-//        body.getComponent().setId(processor.getId());
-//        body.getComponent().setConfig(config);
-
         return processorsApi.updateProcessor(processor.getId(), processor);
     }
 

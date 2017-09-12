@@ -83,7 +83,7 @@ public class TemplateService {
 //        Type returnType = new TypeToken<TemplateDTO>(){}.getType();
 //        TemplateDTO t = (new XML()).deserialize(templateStr, returnType);
 
-        // read and deserialize template from file
+        // read and deserialize template from file (using nifi-client-dto here)
         org.apache.nifi.web.api.dto.TemplateDTO templ = null;
         try {
             JAXBContext context = JAXBContext.newInstance(org.apache.nifi.web.api.dto.TemplateDTO.class);
