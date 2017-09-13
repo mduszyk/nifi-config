@@ -3,10 +3,8 @@ package com.github.hermannpencole.nifi.config.service;
 import com.github.hermannpencole.nifi.swagger.ApiException;
 import com.github.hermannpencole.nifi.swagger.client.FlowApi;
 import com.github.hermannpencole.nifi.swagger.client.ProcessGroupsApi;
-import com.github.hermannpencole.nifi.swagger.client.ProcessorsApi;
 import com.github.hermannpencole.nifi.swagger.client.TemplatesApi;
 import com.github.hermannpencole.nifi.swagger.client.model.*;
-import com.sun.xml.internal.txw2.output.IndentingXMLStreamWriter;
 import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,7 +16,6 @@ import javax.xml.bind.JAXBElement;
 import javax.xml.bind.Marshaller;
 import javax.xml.bind.Unmarshaller;
 import javax.xml.stream.XMLOutputFactory;
-import javax.xml.stream.XMLStreamWriter;
 import javax.xml.transform.stream.StreamSource;
 import java.io.*;
 import java.net.URISyntaxException;
@@ -162,8 +159,7 @@ public class TemplateService {
         JAXBContext context = JAXBContext.newInstance(org.apache.nifi.web.api.dto.TemplateDTO.class);
         Marshaller marshaller = context.createMarshaller();
         XMLOutputFactory xmlof = XMLOutputFactory.newInstance();
-        XMLStreamWriter writer = new IndentingXMLStreamWriter(xmlof.createXMLStreamWriter(bos));
-        marshaller.marshal(dto, writer);
+        marshaller.marshal(dto, xmlof.createXMLStreamWriter(bos));
 
         bos.flush();
         return baos.toByteArray(); //Note: For really large templates this could use a lot of heap space
