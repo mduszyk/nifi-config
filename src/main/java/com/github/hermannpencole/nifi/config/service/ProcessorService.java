@@ -4,6 +4,8 @@ import com.github.hermannpencole.nifi.config.model.ConfigException;
 import com.github.hermannpencole.nifi.config.utils.FunctionUtils;
 import com.github.hermannpencole.nifi.swagger.ApiException;
 import com.github.hermannpencole.nifi.swagger.client.ProcessorsApi;
+import com.github.hermannpencole.nifi.swagger.client.model.ControllerServiceEntity;
+import com.github.hermannpencole.nifi.swagger.client.model.ProcessorConfigDTO;
 import com.github.hermannpencole.nifi.swagger.client.model.ProcessorDTO;
 import com.github.hermannpencole.nifi.swagger.client.model.ProcessorEntity;
 import org.slf4j.Logger;
@@ -12,6 +14,9 @@ import org.slf4j.LoggerFactory;
 import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 /**
  * Class that offer service for process group
@@ -87,6 +92,49 @@ public class ProcessorService {
         } catch (ApiException e1) {
             LOG.error(e1.getMessage());
         }
+    }
+
+    /**
+     * Update processor
+     * @param processor
+     * @return
+     */
+    public ProcessorEntity updateProcessor(ProcessorEntity processor) {
+        ProcessorConfigDTO config = processor.getComponent().getConfig();
+
+        // add auto terminated relations to config, otherwise auto terminate info is lost, why?
+        processor.getComponent().getRelationships().forEach(relationshipDTO -> {
+                    if (relationshipDTO.getAutoTerminate()) {
+                        config.addAutoTerminatedRelationshipsItem(relationshipDTO.getName());
+                    }
+                }
+        );
+
+        return processorsApi.updateProcessor(processor.getId(), processor);
+    }
+
+    /**
+     * Resolve controller service ids to current services present in NiFi.
+     * @param processorEntities processors to update
+     * @param controllerServiceEntities current services pulled from NiFi
+     * @param serviceIdToName mapping of service ids to names
+     */
+    public void updateControllerServiceReferences(
+            List<ProcessorEntity> processorEntities,
+            List<ControllerServiceEntity> controllerServiceEntities,
+            Map<String, String> serviceIdToName
+    ) {
+        processorEntities.forEach(processorEntity -> {
+            Map<String, String> properties = processorEntity.getComponent().getConfig().getProperties();
+            properties.forEach((key, value) ->
+                    Optional.ofNullable(serviceIdToName.get(value)).map(serviceName ->
+                            controllerServiceEntities.stream()
+                                    .filter(service -> serviceName.equals(service.getComponent().getName()))
+                                    .findFirst()
+                                    .map(service -> properties.put(key, service.getId()))
+                    )
+            );
+        });
     }
 
 }
