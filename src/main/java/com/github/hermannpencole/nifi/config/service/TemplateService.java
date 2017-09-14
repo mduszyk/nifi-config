@@ -104,7 +104,7 @@ public class TemplateService {
             templ.getSnippet().setControllerServices(new ArrayList<>());
             // serialize and store modified template in temp file
             InputStream templateIn = new ByteArrayInputStream(serialize(templ));
-            templateTmpFile = File.createTempFile("nifi", "template");
+            templateTmpFile = File.createTempFile("nifi-template-", ".xml");
             OutputStream out = new FileOutputStream(templateTmpFile);
             IOUtils.copy(templateIn, out);
         } catch (Exception e) {
