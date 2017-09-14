@@ -11,11 +11,9 @@ import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
-import javax.xml.bind.JAXBContext;
-import javax.xml.bind.JAXBElement;
-import javax.xml.bind.Marshaller;
-import javax.xml.bind.Unmarshaller;
+import javax.xml.bind.*;
 import javax.xml.stream.XMLOutputFactory;
+import javax.xml.stream.XMLStreamException;
 import javax.xml.transform.stream.StreamSource;
 import java.io.*;
 import java.net.URISyntaxException;
@@ -76,41 +74,16 @@ public class TemplateService {
 
 
         // deserializing template using jaxb and nifi-swagger-client DTOs
-        TemplateDTO templ = null;
-        try {
-            JAXBContext context = JAXBContext.newInstance(TemplateDTO.class);
-            Unmarshaller unmarshaller = context.createUnmarshaller();
-            JAXBElement<TemplateDTO> templateElement =
-                    unmarshaller.unmarshal(
-                            new StreamSource(new FileInputStream(file)),
-                            TemplateDTO.class
-                    );
-            templ = templateElement.getValue();
-            System.out.println(templ);
-        } catch (Exception e) {
-            LOG.error("Failed deserializing template", e);
-        }
+        TemplateDTO templ = deserializeTemplate(file);
 
         // 1. Cache service guid to name mapping from controllerServices section of template.
-        Map<String, String> guidToName = templ.getSnippet().getControllerServices().stream()
-                .collect(Collectors.toMap(
-                        ControllerServiceDTO::getId,
-                        ControllerServiceDTO::getName
-                ));
+        Map<String, String> serviceIdToName = templ.getSnippet().getControllerServices().stream()
+                .collect(Collectors.toMap(ControllerServiceDTO::getId, ControllerServiceDTO::getName));
 
         // 2. Delete controllerServices from the template before template is uploaded to nifi in order to prevent creation of duplicates.
-        File templateTmpFile = null;
-        try {
-            templ.getSnippet().setControllerServices(new ArrayList<>());
-            // serialize and store modified template in temp file
-            InputStream templateIn = new ByteArrayInputStream(serialize(templ));
-            templateTmpFile = File.createTempFile("nifi-template-", ".xml");
-            OutputStream out = new FileOutputStream(templateTmpFile);
-            IOUtils.copy(templateIn, out);
-        } catch (Exception e) {
-            LOG.error("Failed deserializing template", e);
-            throw new ApiException(e);
-        }
+        templ.getSnippet().setControllerServices(Collections.emptyList());
+        // serialize and store modified template in temp file
+        File templateTmpFile = storeTemplate(templ);
 
         // 3. Pull list of controller services from nifi.
         List<ControllerServiceEntity> controllerServiceEntities = flowApi
@@ -129,10 +102,21 @@ public class TemplateService {
         // 4. For each processor's property check if its value is present in the cache.
         // 5. If property value is in a cache, using cached name try to match against controller service name in the list pulled in 3.
         List<ProcessorEntity> processorEntities = flow.getFlow().getProcessors();
+        updateControllerServiceReferences(processorEntities, controllerServiceEntities, serviceIdToName);
+
+        // 6. Update matched controller services references.
+        processorEntities.forEach(processorEntity -> processorService.updateProcessor(processorEntity));
+    }
+
+    private void updateControllerServiceReferences(
+            List<ProcessorEntity> processorEntities,
+            List<ControllerServiceEntity> controllerServiceEntities,
+            Map<String, String> serviceIdToName
+    ) {
         processorEntities.forEach(processorEntity -> {
             Map<String, String> configProperties = processorEntity.getComponent().getConfig().getProperties();
             configProperties.forEach((key, value) ->
-                    Optional.ofNullable(guidToName.get(value))
+                    Optional.ofNullable(serviceIdToName.get(value))
                             .map(serviceName ->
                                     controllerServiceEntities.stream()
                                             .filter(controllerServiceEntity -> serviceName.equals(controllerServiceEntity.getComponent().getName()))
@@ -141,13 +125,25 @@ public class TemplateService {
                             )
             );
         });
-
-        // 6. Update matched controller services references.
-        processorEntities.forEach(processorEntity -> processorService.updateProcessor(processorEntity));
-
     }
 
-    private static byte[] serialize(final TemplateDTO dto) throws Exception {
+    private File storeTemplate(final TemplateDTO template) {
+        try {
+            File file = File.createTempFile("nifi-template-", ".xml");
+            try (
+                InputStream in = new ByteArrayInputStream(serializeTemplate(template));
+                OutputStream out = new FileOutputStream(file);
+            ) {
+                IOUtils.copy(in, out);
+            }
+            return file;
+        } catch (Exception e) {
+            LOG.error("Failed storing template", e);
+            throw new ApiException(e);
+        }
+    }
+
+    private byte[] serializeTemplate(final TemplateDTO dto) throws JAXBException, XMLStreamException, IOException {
         final ByteArrayOutputStream baos = new ByteArrayOutputStream();
         final BufferedOutputStream bos = new BufferedOutputStream(baos);
 
@@ -157,7 +153,23 @@ public class TemplateService {
         marshaller.marshal(dto, xmlof.createXMLStreamWriter(bos));
 
         bos.flush();
-        return baos.toByteArray(); //Note: For really large templates this could use a lot of heap space
+        return baos.toByteArray();
+    }
+
+    private TemplateDTO deserializeTemplate(InputStream in) throws JAXBException {
+        JAXBContext context = JAXBContext.newInstance(TemplateDTO.class);
+        Unmarshaller unmarshaller = context.createUnmarshaller();
+        JAXBElement<TemplateDTO> element = unmarshaller.unmarshal(new StreamSource(in), TemplateDTO.class);
+        return element.getValue();
+    }
+
+    private TemplateDTO deserializeTemplate(File file) {
+        try (InputStream in = new FileInputStream(file)) {
+            return deserializeTemplate(in);
+        } catch (Exception e) {
+            LOG.error("Failed deserializing template", e);
+            throw new ApiException(e);
+        }
     }
 
     public void undeploy(List<String> branch) throws ApiException {
