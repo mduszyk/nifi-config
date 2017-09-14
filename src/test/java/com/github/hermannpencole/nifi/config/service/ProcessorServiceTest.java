@@ -126,7 +126,7 @@ public class ProcessorServiceTest {
     }
 
     @Test
-    public void updateControllerServiceReferences() {
+    public void updateControllerServiceReferencesTest() {
         // given
         Injector injector = Guice.createInjector(new AbstractModule() {
             protected void configure() {
