@@ -75,20 +75,15 @@ public class TemplateService {
         }*/
 
 
-        // deserializing template using nifi-swagger-client DTOs fails
-//        String templateStr = Files.toString(file, Charset.forName("UTF-8"));
-//        Type returnType = new TypeToken<TemplateDTO>(){}.getType();
-//        TemplateDTO t = (new XML()).deserialize(templateStr, returnType);
-
-        // deserialize template using nifi-client-dto (provided by nifi)
-        org.apache.nifi.web.api.dto.TemplateDTO templ = null;
+        // deserializing template using jaxb and nifi-swagger-client DTOs
+        TemplateDTO templ = null;
         try {
-            JAXBContext context = JAXBContext.newInstance(org.apache.nifi.web.api.dto.TemplateDTO.class);
+            JAXBContext context = JAXBContext.newInstance(TemplateDTO.class);
             Unmarshaller unmarshaller = context.createUnmarshaller();
-            JAXBElement<org.apache.nifi.web.api.dto.TemplateDTO> templateElement =
+            JAXBElement<TemplateDTO> templateElement =
                     unmarshaller.unmarshal(
                             new StreamSource(new FileInputStream(file)),
-                            org.apache.nifi.web.api.dto.TemplateDTO.class
+                            TemplateDTO.class
                     );
             templ = templateElement.getValue();
             System.out.println(templ);
@@ -99,14 +94,14 @@ public class TemplateService {
         // 1. Cache service guid to name mapping from controllerServices section of template.
         Map<String, String> guidToName = templ.getSnippet().getControllerServices().stream()
                 .collect(Collectors.toMap(
-                        org.apache.nifi.web.api.dto.ControllerServiceDTO::getId,
-                        org.apache.nifi.web.api.dto.ControllerServiceDTO::getName
+                        ControllerServiceDTO::getId,
+                        ControllerServiceDTO::getName
                 ));
 
         // 2. Delete controllerServices from the template before template is uploaded to nifi in order to prevent creation of duplicates.
         File templateTmpFile = null;
         try {
-            templ.getSnippet().setControllerServices(new HashSet<>());
+            templ.getSnippet().setControllerServices(new ArrayList<>());
             // serialize and store modified template in temp file
             InputStream templateIn = new ByteArrayInputStream(serialize(templ));
             templateTmpFile = File.createTempFile("nifi", "template");
@@ -152,11 +147,11 @@ public class TemplateService {
 
     }
 
-    private static byte[] serialize(final org.apache.nifi.web.api.dto.TemplateDTO dto) throws Exception {
+    private static byte[] serialize(final TemplateDTO dto) throws Exception {
         final ByteArrayOutputStream baos = new ByteArrayOutputStream();
         final BufferedOutputStream bos = new BufferedOutputStream(baos);
 
-        JAXBContext context = JAXBContext.newInstance(org.apache.nifi.web.api.dto.TemplateDTO.class);
+        JAXBContext context = JAXBContext.newInstance(TemplateDTO.class);
         Marshaller marshaller = context.createMarshaller();
         XMLOutputFactory xmlof = XMLOutputFactory.newInstance();
         marshaller.marshal(dto, xmlof.createXMLStreamWriter(bos));

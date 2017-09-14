@@ -16,12 +16,6 @@
     </properties>
     <dependencies>
 
-        <dependency>
-            <groupId>org.apache.nifi</groupId>
-            <artifactId>nifi-client-dto</artifactId>
-            <version>1.0.0</version>
-        </dependency>
-
 		<dependency>
             <groupId>com.github.hermannpencole</groupId>
             <artifactId>nifi-swagger-client</artifactId>
