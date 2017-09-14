@@ -82,22 +82,18 @@ public class TemplateService {
 
         // 2. Delete controllerServices from the template before template is uploaded to nifi in order to prevent creation of duplicates.
         templ.getSnippet().setControllerServices(Collections.emptyList());
-        // serialize and store modified template in temp file
-        File templateTmpFile = storeTemplate(templ);
 
         // 3. Pull list of controller services from nifi.
         List<ControllerServiceEntity> controllerServiceEntities = flowApi
                 .getControllerServicesFromGroup(processGroupFlow.getId())
                 .getControllerServices();
 
-
-        Optional<TemplateEntity> template = Optional.of(processGroupsApi.uploadTemplate(processGroupFlow.getId(), templateTmpFile));
+        Optional<TemplateEntity> template = Optional.of(uploadTemplate(processGroupFlow.getId(), templ));
         InstantiateTemplateRequestEntity instantiateTemplate = new InstantiateTemplateRequestEntity(); // InstantiateTemplateRequestEntity | The instantiate template request.
         instantiateTemplate.setTemplateId(template.get().getTemplate().getId());
         instantiateTemplate.setOriginX(0d);
         instantiateTemplate.setOriginY(0d);
         FlowEntity flow = processGroupsApi.instantiateTemplate(processGroupFlow.getId(), instantiateTemplate);
-
 
         // 4. For each processor's property check if its value is present in the cache.
         // 5. If property value is in a cache, using cached name try to match against controller service name in the list pulled in 3.
@@ -106,6 +102,16 @@ public class TemplateService {
 
         // 6. Update matched controller services references.
         processorEntities.forEach(processorEntity -> processorService.updateProcessor(processorEntity));
+    }
+
+    private TemplateEntity uploadTemplate(String id, TemplateDTO template) {
+        // serialize and store modified template in temp file
+        File tmpFile = storeTemplateTmp(template);
+        try {
+            return processGroupsApi.uploadTemplate(id, tmpFile);
+        } finally {
+            tmpFile.delete();
+        }
     }
 
     private void updateControllerServiceReferences(
@@ -127,7 +133,7 @@ public class TemplateService {
         });
     }
 
-    private File storeTemplate(final TemplateDTO template) {
+    private File storeTemplateTmp(final TemplateDTO template) {
         try {
             File file = File.createTempFile("nifi-template-", ".xml");
             try (
