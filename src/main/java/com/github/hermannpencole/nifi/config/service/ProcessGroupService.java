@@ -245,7 +245,7 @@ public class ProcessGroupService {
 
     public TemplateEntity uploadTemplate(String processGroupId, TemplateDTO template) {
         try {
-            // serialize and store modified template in temp file
+            // serialize and store template in temp file
             File tmpFile = TemplateUtils.storeTmpFile(template);
             try {
                 return processGroupsApi.uploadTemplate(processGroupId, tmpFile);
