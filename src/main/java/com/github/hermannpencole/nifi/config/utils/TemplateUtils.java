@@ -26,17 +26,19 @@ public class TemplateUtils {
     }
 
     public static byte[] serialize(final TemplateDTO dto) throws JAXBException, XMLStreamException, IOException {
-        final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        final BufferedOutputStream bos = new BufferedOutputStream(baos);
+        try (
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                BufferedOutputStream bos = new BufferedOutputStream(baos)
+        ) {
+            // using jaxb for serialization because of differences in behaviour between jaxb (used by NiFi) and jackson
+            JAXBContext context = JAXBContext.newInstance(TemplateDTO.class);
+            Marshaller marshaller = context.createMarshaller();
+            XMLOutputFactory xmlof = XMLOutputFactory.newInstance();
+            marshaller.marshal(dto, xmlof.createXMLStreamWriter(bos));
 
-        // using jaxb for serialization because of differences in behaviour between jaxb (used by NiFi) and jackson
-        JAXBContext context = JAXBContext.newInstance(TemplateDTO.class);
-        Marshaller marshaller = context.createMarshaller();
-        XMLOutputFactory xmlof = XMLOutputFactory.newInstance();
-        marshaller.marshal(dto, xmlof.createXMLStreamWriter(bos));
-
-        bos.flush();
-        return baos.toByteArray();
+            bos.flush();
+            return baos.toByteArray();
+        }
     }
 
     public static TemplateDTO deserialize(InputStream in) throws JAXBException {
