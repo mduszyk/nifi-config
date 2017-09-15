@@ -136,7 +136,10 @@ public class ProcessorService {
                             controllerServiceEntities.stream()
                                     .filter(service -> serviceName.equals(service.getComponent().getName()))
                                     .findFirst()
-                                    .map(service -> properties.put(key, service.getId()))
+                                    .map(service -> {
+                                        properties.put(key, service.getId());
+                                        return updateProcessor(processorEntity);
+                                    })
                     )
             );
         });
