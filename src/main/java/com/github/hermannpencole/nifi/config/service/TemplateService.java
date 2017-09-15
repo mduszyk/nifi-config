@@ -119,7 +119,7 @@ public class TemplateService {
             // Update matched controller services references.
             processorEntities.forEach(processorEntity -> processorService.updateProcessor(processorEntity));
         } catch (Exception e) {
-            LOG.error("Failed storing template", e);
+            LOG.error("Failed installing template", e);
             throw new ApiException(e);
         }
     }
