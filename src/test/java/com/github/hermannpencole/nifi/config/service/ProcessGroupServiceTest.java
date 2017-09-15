@@ -233,7 +233,7 @@ public class ProcessGroupServiceTest {
         when(processGroupsApiMock.uploadTemplate(eq(processGroupId), any(File.class))).thenReturn(templateEntity);
 
         // when
-        TemplateEntity result = processGroupService.uploadTemplate("123", template);
+        TemplateEntity result = processGroupService.uploadTemplate(processGroupId, template);
 
         // then
         verify(processGroupsApiMock).uploadTemplate(eq(processGroupId), any(File.class));
