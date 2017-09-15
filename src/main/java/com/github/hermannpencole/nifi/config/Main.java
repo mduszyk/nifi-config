@@ -68,6 +68,7 @@ public class Main {
             options.addOption("connectionTimeout", true, "configure api client connection timeout (default 10 seconds)");
             options.addOption("readTimeout", true, "configure api client read timeout (default 10 seconds)");
             options.addOption("writeTimeout", true, "configure api client write timeout (default 10 seconds)");
+            options.addOption("useParentControllersIfPresent", false, "use controller services from parent group if they exist");
 
             // parse the command line arguments
             CommandLine cmd = commandLineParser.parse(options, args);
@@ -135,8 +136,11 @@ public class Main {
                     LOG.info("The group configuration {} is extrated on file {}", branch, fileConfiguration);
                 } else if ("deployTemplate".equals(cmd.getOptionValue("m"))) {
                     TemplateService templateService = injector.getInstance(TemplateService.class);
-                    templateService.installOnBranch(branchList, fileConfiguration);
-//                    templateService.installOnBranchUseParentService(branchList, fileConfiguration);
+                    if (cmd.hasOption("useParentControllersIfPresent")) {
+                        templateService.installOnBranchUseParentService(branchList, fileConfiguration);
+                    } else {
+                        templateService.installOnBranch(branchList, fileConfiguration);
+                    }
                     LOG.info("Template {} is installed on the group {}", fileConfiguration, branch);
                 } else {
                     TemplateService templateService = injector.getInstance(TemplateService.class);
