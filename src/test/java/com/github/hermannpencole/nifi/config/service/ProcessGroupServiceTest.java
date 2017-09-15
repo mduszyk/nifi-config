@@ -14,6 +14,7 @@ import org.mockito.runners.MockitoJUnitRunner;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -179,13 +180,14 @@ public class ProcessGroupServiceTest {
         processors.add(TestUtils.createProcessorEntity("7","name7"));
         responseRoot.getProcessGroupFlow().getFlow().setProcessors(processors);
         List<Set<?>> result = processGroupService.reorder(responseRoot.getProcessGroupFlow().getFlow());
-        assertEquals("3", ((ProcessorEntity)result.get(0).toArray()[0]).getId());
-        assertEquals("1", ((ProcessorEntity)result.get(0).toArray()[1]).getId());
-        assertEquals("2", ((ProcessorEntity)result.get(2).toArray()[0]).getId());
-        assertEquals("4", ((ProcessorEntity)result.get(2).toArray()[1]).getId());
-        assertEquals("6", ((ProcessorEntity)result.get(4).toArray()[0]).getId());
-        assertEquals("5", ((ProcessorEntity)result.get(4).toArray()[1]).getId());
-        assertEquals("idCnx6", ((ConnectionEntity)result.get(5).toArray()[0]).getId());
+
+        assertTrue(result.get(0).stream().filter(p -> "1".equals(((ProcessorEntity) p).getId())).count() == 1);
+        assertTrue(result.get(0).stream().filter(p -> "3".equals(((ProcessorEntity) p).getId())).count() == 1);
+        assertTrue(result.get(2).stream().filter(p -> "2".equals(((ProcessorEntity) p).getId())).count() == 1);
+        assertTrue(result.get(2).stream().filter(p -> "4".equals(((ProcessorEntity) p).getId())).count() == 1);
+        assertTrue(result.get(4).stream().filter(p -> "5".equals(((ProcessorEntity) p).getId())).count() == 1);
+        assertTrue(result.get(4).stream().filter(p -> "6".equals(((ProcessorEntity) p).getId())).count() == 1);
+        assertTrue(result.get(5).stream().filter(c -> "idCnx6".equals(((ConnectionEntity) c).getId())).count() == 1);
     }
 
     @Test
