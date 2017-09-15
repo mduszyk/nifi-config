@@ -1,5 +1,6 @@
 package com.github.hermannpencole.nifi.config.service;
 
+import com.github.hermannpencole.nifi.config.utils.TemplateUtils;
 import com.github.hermannpencole.nifi.swagger.ApiException;
 import com.github.hermannpencole.nifi.swagger.client.FlowApi;
 import com.github.hermannpencole.nifi.swagger.client.ProcessGroupsApi;
@@ -11,14 +12,13 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
 
+import javax.xml.bind.JAXBException;
+import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.*;
-import java.util.stream.Collectors;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
 /**
@@ -222,5 +222,22 @@ public class ProcessGroupServiceTest {
         assertEquals(200d, result.getY(), 0);
     }
 
+    @Test
+    public void uploadTemplate() throws IOException, JAXBException {
+        // given
+        String processGroupId = "123";
+        String templatePath = "src/test/resources/template-service-dependency.xml";
+        File file = new File(templatePath);
+        TemplateDTO template = TemplateUtils.deserialize(file);
+        TemplateEntity templateEntity = new TemplateEntity();
+        when(processGroupsApiMock.uploadTemplate(eq(processGroupId), any(File.class))).thenReturn(templateEntity);
+
+        // when
+        TemplateEntity result = processGroupService.uploadTemplate("123", template);
+
+        // then
+        verify(processGroupsApiMock).uploadTemplate(eq(processGroupId), any(File.class));
+        assertEquals(templateEntity, result);
+    }
 
 }
