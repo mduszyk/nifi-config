@@ -64,7 +64,7 @@ public class ProcessorService {
                 body.setComponent(new ProcessorDTO());
                 body.getComponent().setState(state);
                 body.getComponent().setId(processor.getId());
-                body.getComponent().setRestricted(null);
+//                body.getComponent().setRestricted(null);
                 ProcessorEntity processorEntity= processorsApi.updateProcessor(processor.getId(), body);
                 LOG.info(" {} ({}) is {} ", processorEntity.getComponent().getName(), processorEntity.getId(), processorEntity.getComponent().getState());
                 haveResult = true;
@@ -115,6 +115,11 @@ public class ProcessorService {
 
     /**
      * Resolve controller service ids to current services present in NiFi.
+     *
+     * For each processor check if its properties contain value which is present in the serviceIdToName cache.
+     * If property value is present use cached name to try to match against controller service name in the list
+     * of controller services pulled from NiFi.
+     *
      * @param processorEntities processors to update
      * @param controllerServiceEntities current services pulled from NiFi
      * @param serviceIdToName mapping of service ids to names

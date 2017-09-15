@@ -1,5 +1,6 @@
 package com.github.hermannpencole.nifi.config.service;
 
+import com.github.hermannpencole.nifi.config.utils.TemplateUtils;
 import com.github.hermannpencole.nifi.swagger.ApiException;
 import com.github.hermannpencole.nifi.swagger.client.FlowApi;
 import com.github.hermannpencole.nifi.swagger.client.ProcessGroupsApi;
@@ -13,9 +14,7 @@ import javax.inject.Singleton;
 import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -38,6 +37,9 @@ public class TemplateService {
      */
     @Inject
     private ProcessGroupService processGroupService;
+
+    @Inject
+    private ProcessorService processorService;
 
     @Inject
     private ProcessGroupsApi processGroupsApi;
@@ -74,6 +76,54 @@ public class TemplateService {
         processGroupsApi.instantiateTemplate(processGroupFlow.getId(), instantiateTemplate);
     }
 
+    /**
+     * Install template on branch and try to use controller services from parent if they are present.
+     *
+     * @param branch
+     * @param fileConfiguration
+     * @throws ApiException
+     */
+    public void installOnBranchUseParentService(List<String> branch, String fileConfiguration) throws ApiException {
+        try {
+            ProcessGroupFlowDTO processGroupFlow = processGroupService.createDirectory(branch).getProcessGroupFlow();
+            File file = new File(fileConfiguration);
+
+            TemplateDTO template = TemplateUtils.deserialize(file);
+
+            // Cache service id to name mapping from controllerServices section of template.
+            Map<String, String> serviceIdToName = template.getSnippet().getControllerServices().stream()
+                    .collect(Collectors.toMap(ControllerServiceDTO::getId, ControllerServiceDTO::getName));
+
+            // Pull list of controller services from NiFi.
+            List<ControllerServiceEntity> controllerServiceEntities = flowApi
+                    .getControllerServicesFromGroup(processGroupFlow.getId())
+                    .getControllerServices();
+
+            // Delete from the template controller services already present in NiFi.
+            List<ControllerServiceDTO> filteredServices = template.getSnippet().getControllerServices().stream()
+                    .filter(service -> controllerServiceEntities.stream()
+                            .noneMatch(serviceNiFi -> service.getName().equals(serviceNiFi.getComponent().getName())))
+                    .collect(Collectors.toList());
+            template.getSnippet().setControllerServices(filteredServices);
+
+            Optional<TemplateEntity> templateEntity = Optional.of(processGroupService.uploadTemplate(processGroupFlow.getId(), template));
+            InstantiateTemplateRequestEntity instantiateTemplate = new InstantiateTemplateRequestEntity();
+            instantiateTemplate.setTemplateId(templateEntity.get().getTemplate().getId());
+            instantiateTemplate.setOriginX(0d);
+            instantiateTemplate.setOriginY(0d);
+            FlowEntity flow = processGroupsApi.instantiateTemplate(processGroupFlow.getId(), instantiateTemplate);
+
+            List<ProcessorEntity> processorEntities = flow.getFlow().getProcessors();
+            processorService.updateControllerServiceReferences(processorEntities, controllerServiceEntities, serviceIdToName);
+
+            // Update matched controller services references.
+            processorEntities.forEach(processorEntity -> processorService.updateProcessor(processorEntity));
+        } catch (Exception e) {
+            LOG.error("Failed storing template", e);
+            throw new ApiException(e);
+        }
+    }
+
     public void undeploy(List<String> branch) throws ApiException {
         Optional<ProcessGroupFlowEntity> processGroupFlow = processGroupService.changeDirectory(branch);
         if (!processGroupFlow.isPresent()) {
@@ -98,5 +148,4 @@ public class TemplateService {
 
     }
 
-
-    }
+}

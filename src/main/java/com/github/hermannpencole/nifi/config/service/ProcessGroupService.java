@@ -1,5 +1,6 @@
 package com.github.hermannpencole.nifi.config.service;
 
+import com.github.hermannpencole.nifi.config.utils.TemplateUtils;
 import com.github.hermannpencole.nifi.swagger.ApiException;
 import com.github.hermannpencole.nifi.swagger.client.FlowApi;
 import com.github.hermannpencole.nifi.swagger.client.ProcessGroupsApi;
@@ -9,6 +10,7 @@ import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
+import java.io.File;
 import java.util.*;
 
 /**
@@ -240,4 +242,20 @@ public class ProcessGroupService {
         LOG.debug("nest postion {},{}", nextPosition.getX(), nextPosition.getY());
         return nextPosition;
     }
+
+    public TemplateEntity uploadTemplate(String processGroupId, TemplateDTO template) {
+        try {
+            // serialize and store modified template in temp file
+            File tmpFile = TemplateUtils.storeTmpFile(template);
+            try {
+                return processGroupsApi.uploadTemplate(processGroupId, tmpFile);
+            } finally {
+                tmpFile.delete();
+            }
+        } catch (Exception e) {
+            LOG.error("Failed storing template", e);
+            throw new ApiException(e);
+        }
+    }
+
 }

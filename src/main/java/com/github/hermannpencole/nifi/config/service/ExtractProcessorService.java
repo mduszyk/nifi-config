@@ -129,7 +129,7 @@ public class ExtractProcessorService {
         result.setSupportsEventDriven(null);
         result.setSupportsParallelProcessing(null);
         result.setPersistsState(null);
-        result.setRestricted(null);
+//        result.setRestricted(null);
         result.setValidationErrors(null);
 
         return result;

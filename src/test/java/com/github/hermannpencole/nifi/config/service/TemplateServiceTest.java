@@ -1,23 +1,29 @@
 package com.github.hermannpencole.nifi.config.service;
 
+import com.github.hermannpencole.nifi.config.utils.TemplateUtils;
 import com.github.hermannpencole.nifi.swagger.ApiException;
 import com.github.hermannpencole.nifi.swagger.client.FlowApi;
 import com.github.hermannpencole.nifi.swagger.client.ProcessGroupsApi;
 import com.github.hermannpencole.nifi.swagger.client.TemplatesApi;
 import com.github.hermannpencole.nifi.swagger.client.model.*;
+import com.sun.org.apache.xalan.internal.xsltc.compiler.Template;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
 
+import javax.xml.bind.JAXBException;
 import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
+import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.*;
 
 /**
@@ -33,6 +39,8 @@ public class TemplateServiceTest {
     private TemplatesApi templatesApiMock;
     @Mock
     private FlowApi flowApiMock;
+    @Mock
+    private ProcessorService processorServiceMock;
     @InjectMocks
     private TemplateService templateService;
 
@@ -104,4 +112,72 @@ public class TemplateServiceTest {
         templateService.undeploy(branch);
         verify(flowApiMock, never()).getTemplates();
     }
+
+    @Test
+    public void installOnBranchUseParentServiceTest() throws IOException, JAXBException {
+        // given
+        String serviceIdNiFi = "1234";
+        String serviceNameProperties = "Database Connection Pooling Service";
+        List<String> branch = Arrays.asList("root", "reusable_templates", "service-dependency");
+        String templatePath = "src/test/resources/template-service-dependency.xml";
+        String processGroupFlowId = "asdf";
+
+        ProcessGroupFlowEntity processGroupFlowEntity = new ProcessGroupFlowEntity();
+        ProcessGroupFlowDTO processGroupFlowDTO = new ProcessGroupFlowDTO();
+        processGroupFlowDTO.setId(processGroupFlowId);
+        processGroupFlowEntity.setProcessGroupFlow(processGroupFlowDTO);
+        when(processGroupServiceMock.createDirectory(any())).thenReturn(processGroupFlowEntity);
+
+        ControllerServiceEntity controllerServiceEntity = new ControllerServiceEntity();
+        ControllerServiceDTO controllerServiceDTO = new ControllerServiceDTO();
+        controllerServiceDTO.setId(serviceIdNiFi);
+        controllerServiceDTO.setName("ThriftConnectionPool");
+        controllerServiceEntity.setComponent(controllerServiceDTO);
+        controllerServiceEntity.setId(serviceIdNiFi);
+        List<ControllerServiceEntity> services = Arrays.asList(controllerServiceEntity);
+        ControllerServicesEntity servicesEntity = new ControllerServicesEntity();
+        servicesEntity.setControllerServices(services);
+        when(flowApiMock.getControllerServicesFromGroup(any())).thenReturn(servicesEntity);
+
+        TemplateEntity templateEntity = new TemplateEntity();
+        TemplateDTO templateDTO = TemplateUtils.deserialize(new File(templatePath));
+        templateEntity.setTemplate(templateDTO);
+        when(processGroupServiceMock.uploadTemplate(any(), any())).thenReturn(templateEntity);
+
+        ProcessorEntity processor1 = TestUtils.createProcessorEntity("id", "name");
+        processor1.getComponent().getConfig().getProperties()
+                .put(serviceNameProperties, "6199301a-015e-1000-0000-000000000000");
+
+        List<ProcessorEntity> processors = Arrays.asList(processor1);
+        FlowEntity flowEntity = new FlowEntity();
+        FlowDTO flowDTO = new FlowDTO();
+        flowDTO.setProcessors(processors);
+        flowEntity.setFlow(flowDTO);
+        when(processGroupsApiMock.instantiateTemplate(any(), any())).thenReturn(flowEntity);
+
+        doCallRealMethod().when(processorServiceMock).updateControllerServiceReferences(any(), any(), any());
+
+
+        // when
+        templateService.installOnBranchUseParentService(branch, templatePath);
+
+
+        // then
+        verify(processGroupServiceMock).createDirectory(branch);
+        verify(flowApiMock).getControllerServicesFromGroup(processGroupFlowId);
+
+        ArgumentCaptor<TemplateDTO> templateCaptor = ArgumentCaptor.forClass(TemplateDTO.class);
+        verify(processGroupServiceMock).uploadTemplate(eq(processGroupFlowId), templateCaptor.capture());
+        templateDTO.getSnippet().setControllerServices(Collections.emptyList());
+        assertEquals(templateDTO, templateCaptor.getValue());
+
+        ArgumentCaptor<InstantiateTemplateRequestEntity> instantiateCaptor = ArgumentCaptor.forClass(InstantiateTemplateRequestEntity.class);
+        verify(processGroupsApiMock).instantiateTemplate(eq(processGroupFlowId), instantiateCaptor.capture());
+        assertEquals(templateDTO.getId(), instantiateCaptor.getValue().getTemplateId());
+
+        ArgumentCaptor<ProcessorEntity> processorCaptor = ArgumentCaptor.forClass(ProcessorEntity.class);
+        verify(processorServiceMock).updateProcessor(processorCaptor.capture());
+        assertEquals(serviceIdNiFi, processorCaptor.getValue().getComponent().getConfig().getProperties().get(serviceNameProperties));
+    }
+
 }

@@ -135,7 +135,8 @@ public class Main {
                     LOG.info("The group configuration {} is extrated on file {}", branch, fileConfiguration);
                 } else if ("deployTemplate".equals(cmd.getOptionValue("m"))) {
                     TemplateService templateService = injector.getInstance(TemplateService.class);
-                    templateService.installOnBranch(branchList, fileConfiguration);
+//                    templateService.installOnBranch(branchList, fileConfiguration);
+                    templateService.installOnBranchUseParentService(branchList, fileConfiguration);
                     LOG.info("Template {} is installed on the group {}", fileConfiguration, branch);
                 } else {
                     TemplateService templateService = injector.getInstance(TemplateService.class);

@@ -1,0 +1,197 @@
+<?xml version="1.0" ?>
+<template encoding-version="1.0">
+    <description></description>
+    <groupId>7055428e-015e-1000-4e65-f1db18b4cc4e</groupId>
+    <name>service-dependency</name>
+    <snippet>
+        <controllerServices>
+            <id>6199301a-015e-1000-0000-000000000000</id>
+            <parentGroupId>5253dfbc-015d-1000-0000-000000000000</parentGroupId>
+            <comments></comments>
+            <descriptors>
+                <entry>
+                    <key>Database Connection URL</key>
+                    <value>
+                        <name>Database Connection URL</name>
+                    </value>
+                </entry>
+                <entry>
+                    <key>Database Driver Class Name</key>
+                    <value>
+                        <name>Database Driver Class Name</name>
+                    </value>
+                </entry>
+                <entry>
+                    <key>Database Driver Jar Url</key>
+                    <value>
+                        <name>Database Driver Jar Url</name>
+                    </value>
+                </entry>
+                <entry>
+                    <key>Database User</key>
+                    <value>
+                        <name>Database User</name>
+                    </value>
+                </entry>
+                <entry>
+                    <key>Password</key>
+                    <value>
+                        <name>Password</name>
+                    </value>
+                </entry>
+                <entry>
+                    <key>Validation Query</key>
+                    <value>
+                        <name>Validation Query</name>
+                    </value>
+                </entry>
+                <entry>
+                    <key>Validation Query Timeout</key>
+                    <value>
+                        <name>Validation Query Timeout</name>
+                    </value>
+                </entry>
+                <entry>
+                    <key>Max Wait Time</key>
+                    <value>
+                        <name>Max Wait Time</name>
+                    </value>
+                </entry>
+                <entry>
+                    <key>Max Total Connections</key>
+                    <value>
+                        <name>Max Total Connections</name>
+                    </value>
+                </entry>
+                <entry>
+                    <key>Hadoop Configuration Resources</key>
+                    <value>
+                        <name>Hadoop Configuration Resources</name>
+                    </value>
+                </entry>
+                <entry>
+                    <key>Kerberos Principal</key>
+                    <value>
+                        <name>Kerberos Principal</name>
+                    </value>
+                </entry>
+                <entry>
+                    <key>Kerberos Keytab</key>
+                    <value>
+                        <name>Kerberos Keytab</name>
+                    </value>
+                </entry>
+            </descriptors>
+            <name>ThriftConnectionPool</name>
+            <properties>
+                <entry>
+                    <key>Database Connection URL</key>
+                    <value>jdbc:hive2://localhost:10000/default</value>
+                </entry>
+                <entry>
+                    <key>Database Driver Class Name</key>
+                    <value>org.apache.hive.jdbc.HiveDriver</value>
+                </entry>
+                <entry>
+                    <key>Database Driver Jar Url</key>
+                </entry>
+                <entry>
+                    <key>Database User</key>
+                    <value>nifi</value>
+                </entry>
+                <entry>
+                    <key>Password</key>
+                </entry>
+                <entry>
+                    <key>Validation Query</key>
+                </entry>
+                <entry>
+                    <key>Validation Query Timeout</key>
+                </entry>
+                <entry>
+                    <key>Max Wait Time</key>
+                </entry>
+                <entry>
+                    <key>Max Total Connections</key>
+                </entry>
+                <entry>
+                    <key>Hadoop Configuration Resources</key>
+                </entry>
+                <entry>
+                    <key>Kerberos Principal</key>
+                </entry>
+                <entry>
+                    <key>Kerberos Keytab</key>
+                </entry>
+            </properties>
+            <state>ENABLED</state>
+            <type>com.thinkbiganalytics.nifi.v2.thrift.ThriftConnectionPool</type>
+        </controllerServices>
+        <processors>
+            <id>705562d3-015e-1000-0000-000000000000</id>
+            <parentGroupId>7055428e-015e-1000-0000-000000000000</parentGroupId>
+            <position>
+                <x>0.0</x>
+                <y>0.0</y>
+            </position>
+            <config>
+                <bulletinLevel>WARN</bulletinLevel>
+                <comments></comments>
+                <concurrentlySchedulableTaskCount>1</concurrentlySchedulableTaskCount>
+                <descriptors>
+                    <entry>
+                        <key>Database Connection Pooling Service</key>
+                        <value>
+                            <identifiesControllerService>com.thinkbiganalytics.nifi.v2.thrift.ThriftService</identifiesControllerService>
+                            <name>Database Connection Pooling Service</name>
+                        </value>
+                    </entry>
+                    <entry>
+                        <key>SQL select query</key>
+                        <value>
+                            <name>SQL select query</name>
+                        </value>
+                    </entry>
+                    <entry>
+                        <key>Max Wait Time</key>
+                        <value>
+                            <name>Max Wait Time</name>
+                        </value>
+                    </entry>
+                </descriptors>
+                <lossTolerant>false</lossTolerant>
+                <penaltyDuration>30 sec</penaltyDuration>
+                <properties>
+                    <entry>
+                        <key>Database Connection Pooling Service</key>
+                        <value>6199301a-015e-1000-0000-000000000000</value>
+                    </entry>
+                    <entry>
+                        <key>SQL select query</key>
+                        <value>select count(*) from toy_store.products</value>
+                    </entry>
+                    <entry>
+                        <key>Max Wait Time</key>
+                        <value>0 seconds</value>
+                    </entry>
+                </properties>
+                <runDurationMillis>0</runDurationMillis>
+                <schedulingPeriod>30 sec</schedulingPeriod>
+                <schedulingStrategy>TIMER_DRIVEN</schedulingStrategy>
+                <yieldDuration>1 sec</yieldDuration>
+            </config>
+            <name>ExecuteHQL</name>
+            <relationships>
+                <autoTerminate>true</autoTerminate>
+                <name>failure</name>
+            </relationships>
+            <relationships>
+                <autoTerminate>true</autoTerminate>
+                <name>success</name>
+            </relationships>
+            <style></style>
+            <type>com.thinkbiganalytics.nifi.v2.thrift.ExecuteHQL</type>
+        </processors>
+    </snippet>
+    <timestamp>09/11/2017 09:49:18 UTC</timestamp>
+</template>
