@@ -253,7 +253,7 @@ public class ProcessGroupService {
                 tmpFile.delete();
             }
         } catch (Exception e) {
-            LOG.error("Failed storing template", e);
+            LOG.error("Failed uploading template", e);
             throw new ApiException(e);
         }
     }
