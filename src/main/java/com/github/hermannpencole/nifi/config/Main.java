@@ -127,7 +127,8 @@ public class Main {
                 if ("updateConfig".equals(cmd.getOptionValue("m"))) {
                     //Get an instance of the bean from the context
                     UpdateProcessorService processorService = injector.getInstance(UpdateProcessorService.class);
-                    processorService.updateByBranch(branchList, fileConfiguration, cmd.hasOption("noStartProcessors"));
+                    processorService.updateByBranch(branchList, fileConfiguration,
+                            cmd.hasOption("noStartProcessors"), cmd.hasOption("useParentControllersIfPresent"));
                     LOG.info("The group configuration {} is updated with the file {}.", branch, fileConfiguration);
                 } else if ("extractConfig".equals(cmd.getOptionValue("m"))) {
                     //Get an instance of the bean from the context

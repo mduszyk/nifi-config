@@ -46,7 +46,7 @@ public class UpdateProcessorServiceTest {
     @Test(expected = FileNotFoundException.class)
     public void updateFileNotExitingBranchTest() throws ApiException, IOException, URISyntaxException {
         List<String> branch = Arrays.asList("root", "elt1");
-        updateProcessorService.updateByBranch(branch, "not existing", false);
+        updateProcessorService.updateByBranch(branch, "not existing", false, false);
     }
 
     @Test
@@ -66,7 +66,7 @@ public class UpdateProcessorServiceTest {
                 .getProcessors().add(TestUtils.createProcessorEntity("idProc2", "nameProc2"));
         when(flowapiMock.getFlow(subGroupResponse.getProcessGroupFlow().getId())).thenReturn(subGroupResponse);
 
-        updateProcessorService.updateByBranch(branch, getClass().getClassLoader().getResource("mytest1.json").getPath(), false);
+        updateProcessorService.updateByBranch(branch, getClass().getClassLoader().getResource("mytest1.json").getPath(), false, false);
 
         verify(processorsApiMock, times(2)).updateProcessor(any(), any());
         verify(processorsApiMock).updateProcessor(eq("idProc"), any());
@@ -87,7 +87,7 @@ public class UpdateProcessorServiceTest {
         when(processGroupServiceMock.changeDirectory(branch)).thenReturn(Optional.of(response));
         when(flowapiMock.getFlow(response.getProcessGroupFlow().getId())).thenReturn(response);
 
-        updateProcessorService.updateByBranch(branch, getClass().getClassLoader().getResource("mytestAutoTerminateRelationShip.json").getPath(), false);
+        updateProcessorService.updateByBranch(branch, getClass().getClassLoader().getResource("mytestAutoTerminateRelationShip.json").getPath(), false, false);
 
         verify(processorsApiMock, times(1)).updateProcessor(any(), any());
         ArgumentCaptor<ProcessorEntity> processorEntity = ArgumentCaptor.forClass(ProcessorEntity.class);
@@ -107,7 +107,7 @@ public class UpdateProcessorServiceTest {
         controllerServicesEntity.getControllerServices().add(TestUtils.createControllerServiceEntity("idCtrl", "nameCtrl"));
         when(flowapiMock.getControllerServicesFromGroup("idComponent")).thenReturn(controllerServicesEntity);
 
-        updateProcessorService.updateByBranch(branch, getClass().getClassLoader().getResource("mytestController.json").getPath(), false);
+        updateProcessorService.updateByBranch(branch, getClass().getClassLoader().getResource("mytestController.json").getPath(), false, false);
 
         ArgumentCaptor<ControllerServiceEntity> controllerServiceEntity = ArgumentCaptor.forClass(ControllerServiceEntity.class);
         ArgumentCaptor<ControllerServiceDTO> controllerServiceDTO = ArgumentCaptor.forClass(ControllerServiceDTO.class);
@@ -129,7 +129,7 @@ public class UpdateProcessorServiceTest {
         when(flowapiMock.getFlow(response.getProcessGroupFlow().getId())).thenReturn(response);
 
         when(processorsApiMock.updateProcessor(any(), any())).thenThrow(new ApiException());
-        updateProcessorService.updateByBranch(branch, getClass().getClassLoader().getResource("mytest1.json").getPath(), false);
+        updateProcessorService.updateByBranch(branch, getClass().getClassLoader().getResource("mytest1.json").getPath(), false, false);
 
     }
 

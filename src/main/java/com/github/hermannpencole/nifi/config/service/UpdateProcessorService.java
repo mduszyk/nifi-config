@@ -15,10 +15,7 @@ import javax.inject.Inject;
 import javax.inject.Singleton;
 import java.io.*;
 import java.net.URISyntaxException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Class that offer service for nifi processor
@@ -52,7 +49,7 @@ public class UpdateProcessorService {
      * @throws URISyntaxException
      * @throws ApiException
      */
-    public void updateByBranch(List<String> branch, String fileConfiguration, boolean optionNoStartProcessors) throws IOException, ApiException {
+    public void updateByBranch(List<String> branch, String fileConfiguration, boolean optionNoStartProcessors, boolean optionNoParentControllerUpdate) throws IOException, ApiException {
         File file = new File(fileConfiguration);
         if (!file.exists()) {
             throw new FileNotFoundException("Repository " + file.getName() + " is empty or doesn't exist");
@@ -70,16 +67,18 @@ public class UpdateProcessorService {
             processGroupService.stop(componentSearch);
             LOG.info(Arrays.toString(branch.toArray()) + " is stopped");
 
+            String groupId = componentSearch.getProcessGroupFlow().getId();
+
             //the state change, then the revision also in nifi 1.3.0 (only?) reload processGroup
-            componentSearch = flowapi.getFlow(componentSearch.getProcessGroupFlow().getId());
+            componentSearch = flowapi.getFlow(groupId);
 
             //generate clientID
             String clientId = flowapi.generateClientId();
             updateComponent(configuration, componentSearch, clientId);
 
             //controller
-            ControllerServicesEntity controllerServicesEntity = flowapi.getControllerServicesFromGroup(componentSearch.getProcessGroupFlow().getId());
-            updateControllers(configuration, controllerServicesEntity);
+            ControllerServicesEntity controllerServicesEntity = flowapi.getControllerServicesFromGroup(groupId);
+            updateControllers(configuration, controllerServicesEntity, groupId, optionNoParentControllerUpdate);
 
             if (!optionNoStartProcessors) {
                 //Run all nifi processors
@@ -103,27 +102,32 @@ public class UpdateProcessorService {
      * @param controllerServicesEntity
      * @throws ApiException
      */
-    private void updateControllers(GroupProcessorsEntity configuration, ControllerServicesEntity controllerServicesEntity) throws ApiException, InterruptedException {
+    private void updateControllers(GroupProcessorsEntity configuration, ControllerServicesEntity controllerServicesEntity, String groupId, boolean optionNoParentControllerUpdate) throws ApiException, InterruptedException {
         for (ControllerServiceDTO controllerServiceDTO : configuration.getControllerServicesDTO()) {
 
             //find controller for have id
-            ControllerServiceEntity controllerServiceEntityFind = controllerServicesEntity.getControllerServices().stream().filter(item -> item.getComponent().getName().trim().equals(controllerServiceDTO.getName().trim()))
-                    .findFirst().orElseThrow(() -> new ConfigException(("cannot find " + controllerServiceDTO.getName())));
+            controllerServicesEntity.getControllerServices().stream()
+                    .filter(item ->
+                            item.getComponent().getName().trim().equals(controllerServiceDTO.getName().trim())
+                                    && (!optionNoParentControllerUpdate || groupId.equals(item.getComponent().getParentGroupId())))
+                    .findFirst()
+                    .ifPresent(controllerServiceEntityFind -> {
+                        //stopping referencing processors and reporting tasks
+                        //  controllerServicesService.setStateReferenceProcessors(controllerServiceEntityFind, UpdateControllerServiceReferenceRequestEntity.StateEnum.STOPPED);
 
-            //stopping referencing processors and reporting tasks
-          //  controllerServicesService.setStateReferenceProcessors(controllerServiceEntityFind, UpdateControllerServiceReferenceRequestEntity.StateEnum.STOPPED);
+                        //Disabling referencing controller services
+                        controllerServicesService.setStateReferencingControllerServices(controllerServiceEntityFind.getId(), UpdateControllerServiceReferenceRequestEntity.StateEnum.DISABLED);
 
-            //Disabling referencing controller services
-            controllerServicesService.setStateReferencingControllerServices(controllerServiceEntityFind.getId(), UpdateControllerServiceReferenceRequestEntity.StateEnum.DISABLED);
+                        //Enabling this controller service
+                        ControllerServiceEntity controllerServiceEntityUpdate = controllerServicesService.updateControllerService(controllerServiceDTO, controllerServiceEntityFind);
 
-            //Enabling this controller service
-            ControllerServiceEntity controllerServiceEntityUpdate = controllerServicesService.updateControllerService(controllerServiceDTO, controllerServiceEntityFind);
+                        //Enabling referencing controller services
+                        controllerServicesService.setStateReferencingControllerServices(controllerServiceEntityFind.getId(), UpdateControllerServiceReferenceRequestEntity.StateEnum.ENABLED);
 
-            //Enabling referencing controller services
-            controllerServicesService.setStateReferencingControllerServices(controllerServiceEntityFind.getId(), UpdateControllerServiceReferenceRequestEntity.StateEnum.ENABLED);
+                        //Starting referencing processors and reporting tasks
+                        //  controllerServicesService.setStateReferenceProcessors(controllerServiceEntityUpdate, UpdateControllerServiceReferenceRequestEntity.StateEnum.RUNNING);
+                    });
 
-            //Starting referencing processors and reporting tasks
-          //  controllerServicesService.setStateReferenceProcessors(controllerServiceEntityUpdate, UpdateControllerServiceReferenceRequestEntity.StateEnum.RUNNING);
         }
     }
 
