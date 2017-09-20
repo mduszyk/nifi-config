@@ -132,15 +132,16 @@ public class ProcessorService {
         processorEntities.forEach(processorEntity -> {
             Map<String, String> properties = processorEntity.getComponent().getConfig().getProperties();
             properties.forEach((key, value) ->
-                    Optional.ofNullable(serviceIdToName.get(value)).map(serviceName ->
-                            controllerServiceEntities.stream()
-                                    .filter(service -> serviceName.equals(service.getComponent().getName()))
-                                    .findFirst()
-                                    .map(service -> {
-                                        properties.put(key, service.getId());
-                                        return updateProcessor(processorEntity);
-                                    })
-                    )
+                    Optional.ofNullable(serviceIdToName.get(value))
+                            .ifPresent(serviceName ->
+                                    controllerServiceEntities.stream()
+                                            .filter(service -> serviceName.equals(service.getComponent().getName()))
+                                            .findFirst()
+                                            .ifPresent(service -> {
+                                                properties.put(key, service.getId());
+                                                updateProcessor(processorEntity);
+                                            })
+                            )
             );
         });
     }
