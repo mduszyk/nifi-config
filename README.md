@@ -28,7 +28,7 @@ usage: java -jar nifi-deploy-config-1.1.5.jar [OPTIONS]
  -n,--nifi <arg>           mandatory : Nifi http (ex : http://localhost:8080/nifi-api)
 ```
 
-*For more options see Chapiter [Advanced options](#advanced-options)*
+*For more options see Chapter [Advanced options](#advanced-options)*
 
 Requirement : *You must have java 8 or higher installed on your machine*
 
@@ -258,9 +258,10 @@ Pooling
 
  Other
  ```shell
- -f,--force                turn on force mode : empty queue after timeout
- -noStartProcessors        turn off auto start of the processors after update of the config
- -enableDebugMode          turn on debugging mode of the underlying API library
+ -f,--force                         turn on force mode : empty queue after timeout
+ -noStartProcessors                 turn off auto start of the processors after update of the config
+ -enableDebugMode                   turn on debugging mode of the underlying API library
+ -useParentControllersIfPresent     use existing controllers from parent group instead of creating new ones
  ```
 # TODO
 
