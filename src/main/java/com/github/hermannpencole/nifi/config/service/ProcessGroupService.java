@@ -1,5 +1,6 @@
 package com.github.hermannpencole.nifi.config.service;
 
+import com.github.hermannpencole.nifi.config.model.ConfigException;
 import com.github.hermannpencole.nifi.config.utils.TemplateUtils;
 import com.github.hermannpencole.nifi.swagger.ApiException;
 import com.github.hermannpencole.nifi.swagger.client.FlowApi;
@@ -253,7 +254,7 @@ public class ProcessGroupService {
             }
         } catch (Exception e) {
             LOG.error("Failed uploading template", e);
-            throw new ApiException(e);
+            throw new ConfigException(e);
         }
     }
 

@@ -15,7 +15,10 @@ import javax.inject.Singleton;
 import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
-import java.util.*;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -88,7 +91,7 @@ public class TemplateService {
      * @param fileConfiguration
      * @throws ApiException
      */
-    public void installOnBranchUseParentService(List<String> branch, String fileConfiguration) throws ApiException {
+    public void installOnBranchUseParentService(List<String> branch, String fileConfiguration) throws ConfigException {
         try {
             ProcessGroupFlowDTO processGroupFlow = processGroupService.createDirectory(branch).getProcessGroupFlow();
             File file = new File(fileConfiguration);
