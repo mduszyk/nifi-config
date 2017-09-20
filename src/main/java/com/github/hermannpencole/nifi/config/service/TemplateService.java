@@ -1,5 +1,6 @@
 package com.github.hermannpencole.nifi.config.service;
 
+import com.github.hermannpencole.nifi.config.model.ConfigException;
 import com.github.hermannpencole.nifi.config.utils.TemplateUtils;
 import com.github.hermannpencole.nifi.swagger.ApiException;
 import com.github.hermannpencole.nifi.swagger.client.FlowApi;
@@ -69,11 +70,15 @@ public class TemplateService {
             template = Optional.of(processGroupsApi.uploadTemplate(processGroupFlow.getId(), file));
         }*/
         Optional<TemplateEntity> template = Optional.of(processGroupsApi.uploadTemplate(processGroupFlow.getId(), file));
+        instantiateTemplate(template.get().getTemplate().getId(), processGroupFlow.getId());
+    }
+
+    private FlowEntity instantiateTemplate(String templateId, String processGroupId) {
         InstantiateTemplateRequestEntity instantiateTemplate = new InstantiateTemplateRequestEntity(); // InstantiateTemplateRequestEntity | The instantiate template request.
-        instantiateTemplate.setTemplateId(template.get().getTemplate().getId());
+        instantiateTemplate.setTemplateId(templateId);
         instantiateTemplate.setOriginX(0d);
         instantiateTemplate.setOriginY(0d);
-        processGroupsApi.instantiateTemplate(processGroupFlow.getId(), instantiateTemplate);
+        return processGroupsApi.instantiateTemplate(processGroupId, instantiateTemplate);
     }
 
     /**
@@ -107,17 +112,13 @@ public class TemplateService {
             template.getSnippet().setControllerServices(filteredServices);
 
             Optional<TemplateEntity> templateEntity = Optional.of(processGroupService.uploadTemplate(processGroupFlow.getId(), template));
-            InstantiateTemplateRequestEntity instantiateTemplate = new InstantiateTemplateRequestEntity();
-            instantiateTemplate.setTemplateId(templateEntity.get().getTemplate().getId());
-            instantiateTemplate.setOriginX(0d);
-            instantiateTemplate.setOriginY(0d);
-            FlowEntity flow = processGroupsApi.instantiateTemplate(processGroupFlow.getId(), instantiateTemplate);
+            FlowEntity flow = instantiateTemplate(templateEntity.get().getTemplate().getId(), processGroupFlow.getId());
 
             List<ProcessorEntity> processorEntities = flow.getFlow().getProcessors();
             processorService.updateControllerServiceReferences(processorEntities, controllerServiceEntities, serviceIdToName);
         } catch (Exception e) {
             LOG.error("Failed installing template", e);
-            throw new ApiException(e);
+            throw new ConfigException(e);
         }
     }
 
