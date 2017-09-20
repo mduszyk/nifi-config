@@ -55,7 +55,7 @@ public class TemplateUtilsTest {
         TemplateDTO templateOrig = TemplateUtils.deserialize(new File(TEMPLATE_PATH));
 
         // when
-        File templateStored = TemplateUtils.storeTmpFile(templateOrig);
+        File templateStored = TemplateUtils.serializeAndStoreTmpFile(templateOrig);
         try {
             TemplateDTO templateDeserialized = TemplateUtils.deserialize(templateStored);
 

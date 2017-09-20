@@ -174,7 +174,6 @@ public class UpdateProcessorService {
             componentToPutInProc.setSupportsEventDriven(processorToUpdate.getComponent().getSupportsEventDriven());
             componentToPutInProc.setSupportsParallelProcessing(processorToUpdate.getComponent().getSupportsParallelProcessing());
             componentToPutInProc.setPersistsState(processorToUpdate.getComponent().getPersistsState());
-//            componentToPutInProc.setRestricted(null);//processorToUpdate.getComponent().getRestricted());
             componentToPutInProc.setValidationErrors(processorToUpdate.getComponent().getValidationErrors());
             //remove controller link
             for ( Map.Entry<String, PropertyDescriptorDTO> entry : processorToUpdate.getComponent().getConfig().getDescriptors().entrySet()) {
