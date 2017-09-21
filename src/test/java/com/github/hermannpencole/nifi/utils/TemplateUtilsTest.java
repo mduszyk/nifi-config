@@ -29,7 +29,7 @@ public class TemplateUtilsTest {
 
         // then
         assertEquals("service-dependency", template.getName());
-        assertEquals("7055428e-015e-1000-4e65-f1db18b4cc4e", template.getGroupId());
+        assertEquals("a3fc20a2-015e-1000-e295-14e957156302", template.getGroupId());
         assertEquals(1, template.getSnippet().getControllerServices().size());
         assertEquals(1, template.getSnippet().getProcessors().size());
     }

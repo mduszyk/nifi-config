@@ -131,7 +131,7 @@ public class TemplateServiceTest {
         ControllerServiceEntity controllerServiceEntity = new ControllerServiceEntity();
         ControllerServiceDTO controllerServiceDTO = new ControllerServiceDTO();
         controllerServiceDTO.setId(serviceIdNiFi);
-        controllerServiceDTO.setName("ThriftConnectionPool");
+        controllerServiceDTO.setName("MySQL");
         controllerServiceEntity.setComponent(controllerServiceDTO);
         controllerServiceEntity.setId(serviceIdNiFi);
         List<ControllerServiceEntity> services = Arrays.asList(controllerServiceEntity);
@@ -146,7 +146,7 @@ public class TemplateServiceTest {
 
         ProcessorEntity processor1 = TestUtils.createProcessorEntity("id", "name");
         processor1.getComponent().getConfig().getProperties()
-                .put(serviceNameProperties, "6199301a-015e-1000-0000-000000000000");
+                .put(serviceNameProperties, "525f1b8e-015d-1000-0000-000000000000");
 
         List<ProcessorEntity> processors = Arrays.asList(processor1);
         FlowEntity flowEntity = new FlowEntity();
