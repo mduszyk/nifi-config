@@ -98,7 +98,7 @@ public class ProcessorService {
      * @param processor
      * @return
      */
-    public ProcessorEntity updateProcessor(ProcessorEntity processor) {
+    protected ProcessorEntity updateProcessor(ProcessorEntity processor) {
         ProcessorConfigDTO config = processor.getComponent().getConfig();
 
         // add auto terminated relations to config, otherwise auto terminate info is lost, why?
