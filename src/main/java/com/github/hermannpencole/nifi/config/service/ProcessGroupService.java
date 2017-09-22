@@ -213,13 +213,12 @@ public class ProcessGroupService {
     }
 
     /**
-     * get the next free position to place the processor(or group processor) on this group processor
+     * get the next free position to place the processor (or group processor) on this group processor
      *
      * @param flowEntity
      * @return
      */
     public PositionDTO getNextPosition(ProcessGroupFlowEntity flowEntity) {
-        PositionDTO nextPosition = new PositionDTO();
         List<PositionDTO> positions = new ArrayList<>();
 
         for (ProcessorEntity processor : flowEntity.getProcessGroupFlow().getFlow().getProcessors()) {
@@ -257,10 +256,11 @@ public class ProcessGroupService {
             }
         }
 
+        PositionDTO nextPosition = new PositionDTO();
         nextPosition.setX(x);
         nextPosition.setY(y);
 
-        LOG.debug("nest postion {},{}", nextPosition.getX(), nextPosition.getY());
+        LOG.debug("next position {},{}", nextPosition.getX(), nextPosition.getY());
         return nextPosition;
     }
 
