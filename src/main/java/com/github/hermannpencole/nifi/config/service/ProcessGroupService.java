@@ -13,6 +13,7 @@ import javax.inject.Inject;
 import javax.inject.Singleton;
 import java.io.File;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Class that offer service for process group
@@ -246,17 +247,37 @@ public class ProcessGroupService {
             positions.add(label.getPosition());
         }
 
-        Double maxX = positions.stream()
-                .filter(Objects::nonNull)
-                .max((o1, o2) -> o1.getX() > o2.getX() ? 1 : -1)
-                .map(PositionDTO::getX)
-                .orElse(0d);
+        // remove nulls from positions list
+        positions = positions.stream().filter(Objects::nonNull).collect(Collectors.toList());
 
-        nextPosition.setX(maxX + 500);
-        nextPosition.setY(0d);
+        double x = 0, y = 0;
+        while(containsPosition(positions, x, y)) {
+            if (x + ELEMENT_WIDTH > MAX_X) {
+                x = 0;
+                y += ELEMENT_HEIGHT;
+            } else {
+                x += ELEMENT_WIDTH;
+            }
+        }
+
+        nextPosition.setX(x);
+        nextPosition.setY(y);
 
         LOG.debug("nest postion {},{}", nextPosition.getX(), nextPosition.getY());
         return nextPosition;
+    }
+
+    private final static double ELEMENT_WIDTH = 500;
+    private final static double ELEMENT_HEIGHT = 350;
+    private final static double MAX_X = 5000;
+
+    private boolean containsPosition(List<PositionDTO> positions, double x, double y) {
+        return positions.stream().anyMatch(positionDTO -> {
+            double posX = positionDTO.getX();
+            double posY = positionDTO.getY();
+            return ((posX <= x && x <= posX + ELEMENT_WIDTH) || (posX <= x + ELEMENT_WIDTH && x <= posX))
+                    && ((posY <= y && y <= posY + ELEMENT_HEIGHT) || (posY <= y + ELEMENT_HEIGHT && y <= posY));
+        });
     }
 
     public TemplateEntity uploadTemplate(String processGroupId, TemplateDTO template) {
