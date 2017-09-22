@@ -220,23 +220,38 @@ public class ProcessGroupService {
     public PositionDTO getNextPosition(ProcessGroupFlowEntity flowEntity) {
         PositionDTO nextPosition = new PositionDTO();
         List<PositionDTO> positions = new ArrayList<>();
+
         for (ProcessorEntity processor : flowEntity.getProcessGroupFlow().getFlow().getProcessors()) {
             positions.add(processor.getPosition());
         }
         for (ProcessGroupEntity processGroup : flowEntity.getProcessGroupFlow().getFlow().getProcessGroups()) {
             positions.add(processGroup.getPosition());
         }
-
-        nextPosition.setX(0d);
-        nextPosition.setY(0d);
-        while (positions.indexOf(nextPosition) != -1) {
-            if(nextPosition.getX() == 800d) {
-                nextPosition.setX(0d);
-                nextPosition.setY(nextPosition.getY() + 200);
-            } else {
-                nextPosition.setX(nextPosition.getX() + 400);
-            }
+        for (PortEntity port : flowEntity.getProcessGroupFlow().getFlow().getInputPorts()) {
+            positions.add(port.getPosition());
         }
+        for (PortEntity port : flowEntity.getProcessGroupFlow().getFlow().getOutputPorts()) {
+            positions.add(port.getPosition());
+        }
+        for (ConnectionEntity conn : flowEntity.getProcessGroupFlow().getFlow().getConnections()) {
+            positions.add(conn.getPosition());
+        }
+        for (FunnelEntity funnel : flowEntity.getProcessGroupFlow().getFlow().getFunnels()) {
+            positions.add(funnel.getPosition());
+        }
+        for (LabelEntity label : flowEntity.getProcessGroupFlow().getFlow().getLabels()) {
+            positions.add(label.getPosition());
+        }
+
+        Double maxX = positions.stream()
+                .filter(Objects::nonNull)
+                .max((o1, o2) -> o1.getX() > o2.getX() ? 1 : -1)
+                .map(PositionDTO::getX)
+                .orElse(0d);
+
+        nextPosition.setX(maxX + 500);
+        nextPosition.setY(0d);
+
         LOG.debug("nest postion {},{}", nextPosition.getX(), nextPosition.getY());
         return nextPosition;
     }

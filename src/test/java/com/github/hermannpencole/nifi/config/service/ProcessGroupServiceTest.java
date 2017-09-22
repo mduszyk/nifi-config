@@ -216,8 +216,8 @@ public class ProcessGroupServiceTest {
             processGroup.setPosition(position);
         }
         PositionDTO result = processGroupService.getNextPosition(responseRoot);
-        assertEquals(0d, result.getX(), 0);
-        assertEquals(200d, result.getY(), 0);
+        assertEquals(1700d, result.getX(), 0);
+        assertEquals(0d, result.getY(), 0);
     }
 
 
