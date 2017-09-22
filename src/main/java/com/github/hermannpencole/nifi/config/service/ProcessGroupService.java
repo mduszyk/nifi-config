@@ -264,6 +264,7 @@ public class ProcessGroupService {
         return nextPosition;
     }
 
+    // this has to be pre-configured because there is no way to retrieve element size from NiFi
     private final static double ELEMENT_WIDTH = 500;
     private final static double ELEMENT_HEIGHT = 350;
     private final static double MAX_X = 5000;
